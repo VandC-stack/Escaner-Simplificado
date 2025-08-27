@@ -223,7 +223,7 @@ class BuscadorApp:
                             if cumple_count == total_count:
                                 resultado_final = "CUMPLE"
                             elif cumple_count > 0:
-                                resultado_final = "PARCIAL"
+                                resultado_final = "REQUIERE REVISIÓN"
                             else:
                                 resultado_final = "INSPECCIÓN"
                             
@@ -265,11 +265,11 @@ class BuscadorApp:
             if num_registros > 0:
                 # Contar resultados
                 cumple = len(df[df['RESULTADO'] == 'CUMPLE'])
-                parcial = len(df[df['RESULTADO'] == 'PARCIAL'])
+                requiere_revision = len(df[df['RESULTADO'] == 'REQUIERE REVISIÓN'])
                 inspeccion = len(df[df['RESULTADO'] == 'INSPECCIÓN'])
                 sin_datos = len(df[df['RESULTADO'] == 'SIN DATOS'])
                 
-                mensaje = f"El índice local existe.\nRegistros: {num_registros}\n\nDesglose:\n- Cumple: {cumple}\n- Parcial: {parcial}\n- Inspección: {inspeccion}\n- Sin datos: {sin_datos}"
+                mensaje = f"El índice local existe.\nRegistros: {num_registros}\n\nDesglose:\n- Cumple: {cumple}\n- Requiere Revisión: {requiere_revision}\n- Inspección: {inspeccion}\n- Sin datos: {sin_datos}"
                 messagebox.showinfo("Verificar Índice", mensaje)
             else:
                 messagebox.showwarning("Verificar Índice", "El índice local está vacío.")

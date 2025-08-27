@@ -18,7 +18,7 @@ Sistema de escaneo y verificación de códigos de barras para control de calidad
 La aplicación clasifica los productos en cuatro categorías:
 
 1. **CUMPLE**: Producto que cumple con todas las normas
-2. **PARCIAL**: Cumple parcialmente con las normas
+2. **REQUIERE REVISIÓN**: Algunos criterios cumplen pero otros no, necesita revisión
 3. **INSPECCIÓN**: Requiere inspección física
 4. **SIN DATOS**: No hay información disponible
 

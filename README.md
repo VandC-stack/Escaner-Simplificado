@@ -1,115 +1,138 @@
-# Escáner de Códigos V&C
+# Escáner de Códigos V&C v0.2.1.5
 
-## Descripción
+## 🎯 Descripción
+Sistema de escaneo y validación de códigos de barras para verificar el cumplimiento de normas mexicanas (NOM) en productos importados. Herramienta de control de calidad para aduanas.
 
-Sistema de escaneo y verificación de códigos de barras para control de calidad y cumplimiento de normas mexicanas (NOM) en productos importados.
+## 🚀 Nuevas Mejoras Implementadas
 
-## Características Principales
+### 🔍 Búsqueda Mejorada de Códigos
+- **Búsqueda Exacta**: Mantiene la funcionalidad original
+- **Búsqueda Parcial**: Encuentra códigos que contengan el patrón escaneado
+- **Búsqueda por Similitud**: Busca por últimos 8 dígitos cuando no hay coincidencias exactas
+- **Indicadores Visuales**: Muestra el tipo de coincidencia encontrada
 
-- **Escaneo de códigos de barras** en tiempo real
-- **Verificación de cumplimiento** de normas NOM
-- **Edición de reportes** de mercancía directamente desde la aplicación
-- **Interfaz moderna** con tema oscuro y colores corporativos
-- **Gestión de archivos** CLP y reportes de mercancía
-- **Índice local** para búsquedas rápidas
+### 🛠️ Sistema de Diagnóstico
+- **Botón de Diagnóstico**: Nueva herramienta para analizar códigos problemáticos
+- **Análisis Detallado**: Muestra similitudes y posibles coincidencias
+- **Información del Índice**: Estadísticas sobre códigos disponibles
 
-## Estados de Resultado
+### 🔄 Actualización Automática del Índice
+- **Sincronización Mejorada**: El índice se actualiza automáticamente después de editar items
+- **Confirmación Visual**: Mensajes de confirmación para el usuario
+- **Manejo de Errores**: Mejor robustez en la limpieza de datos
 
-La aplicación clasifica los productos en cuatro categorías:
+### 🛡️ Robustez Mejorada
+- **Limpieza de Datos**: Función mejorada para manejar formatos diversos
+- **Manejo de Excepciones**: Mejor control de errores en procesamiento
+- **Logging**: Sistema de registro para debugging
 
-1. **CUMPLE**: Producto que cumple con todas las normas
-2. **REQUIERE REVISIÓN**: Algunos criterios cumplen pero otros no, necesita revisión
-3. **INSPECCIÓN**: Requiere inspección física
-4. **SIN DATOS**: No hay información disponible
+## 📋 Funcionalidades Principales
 
-## Campos Editables
+### 1. Escaneo de Códigos
+- Entrada de códigos de barras con búsqueda flexible
+- Múltiples estrategias de búsqueda
+- Indicadores de tipo de coincidencia
 
-### Tipo de Proceso
-- CUMPLE
-- ADHERIBLE
-- COSTURA
-- SIN NORMA
+### 2. Gestión de Índice
+- Actualización desde archivos Excel (CLP y Reporte)
+- Verificación de integridad
+- Borrado completo del índice
 
-### Criterio
-- REVISADO
-- NO CUMPLE
-- (vacío)
+### 3. Editor de Items
+- Edición de tipo de proceso y criterio
+- Actualización automática del reporte
+- Regeneración automática del índice
 
-## Requisitos del Sistema
+### 4. Sistema de Diagnóstico
+- Análisis de códigos problemáticos
+- Búsqueda de similitudes
+- Estadísticas del índice
 
-- Python 3.7 o superior
-- Windows 10/11
-- Librerías requeridas (ver requirements.txt)
+## 🗂️ Estructura de Archivos
 
-## Instalación
-
-1. Clonar el repositorio:
-```bash
-git clone https://github.com/VandC-stack/Escaner-Simplificado.git
-cd Escaner-Simplificado
+```
+Escaner 0.2.1.5/
+├── Escanaer_V0.2.1.5.py    # Aplicación principal
+├── requirements.txt         # Dependencias
+├── README.md               # Documentación
+├── cache/                  # Directorio de caché
+│   ├── config.json        # Configuración
+│   └── indice.csv         # Índice generado
+└── resources/             # Recursos
+    ├── Escaner.ico        # Icono
+    └── Logo (2).png       # Logo
 ```
 
-2. Instalar dependencias:
+## 🔧 Instalación
+
+1. **Instalar dependencias**:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Ejecutar la aplicación:
+2. **Ejecutar la aplicación**:
 ```bash
-python Escanaer_V0.2.1.py
+python Escanaer_V0.2.1.5.py
 ```
 
-## Uso
+## 📊 Estados de Resultado
+
+- **CUMPLE**: Todos los criterios cumplen las normas
+- **REQUIERE REVISIÓN**: Algunos criterios cumplen, otros no
+- **INSPECCIÓN**: Ningún criterio cumple las normas
+- **SIN DATOS**: No se encontró información en el reporte
+
+## 🎮 Uso de la Aplicación
 
 ### Configuración Inicial
-1. Abrir la pestaña "Configuración"
-2. Cargar archivo CLP (Contenedor de Línea de Producto)
-3. Cargar reporte de mercancía
-4. Actualizar índice local
+1. Ir a la pestaña "Configuración"
+2. Cargar archivo CLP (Código de Línea de Producto)
+3. Cargar archivo de Reporte de Mercancía
+4. Actualizar el índice
 
-### Escaneo de Productos
-1. Ir a la pestaña "Escáner"
-2. Introducir código de barras manualmente o escanear
+### Escaneo de Códigos
+1. Ingresar código de barras en el campo de entrada
+2. Presionar "Buscar" o Enter
 3. Revisar resultados mostrados
-4. Opcional: Editar items usando el botón "Editar Items"
 
-### Edición de Reportes
-1. Después de escanear, hacer clic en "Editar Items"
-2. Modificar Tipo de Proceso y Criterio según sea necesario
-3. Guardar cambios (se actualiza el archivo Excel original)
+### Edición de Items
+1. Buscar un código que tenga resultados
+2. Hacer clic en "Editar Items"
+3. Modificar tipo de proceso y criterio
+4. Guardar cambios
 
-## Estructura del Proyecto
+### Diagnóstico de Problemas
+1. Hacer clic en "Diagnóstico de Código"
+2. Ingresar código problemático
+3. Revisar análisis detallado
 
-```
-Escaner-Simplificado/
-├── Escanaer_V0.2.1.py      # Aplicación principal
-├── resources/               # Recursos gráficos
-│   ├── Logo (2).png
-│   ├── logo.png
-│   ├── Luna.png
-│   └── Sol.png
-├── cache/                   # Archivos de configuración
-│   ├── config.json
-│   └── indice.csv
-├── requirements.txt         # Dependencias
-└── README.md               # Documentación
-```
+## 🔍 Tipos de Coincidencia
 
-## Dependencias
+- **Exacta**: Coincidencia perfecta al inicio del código
+- **Parcial**: El código escaneado está contenido en el código del índice
+- **Final**: Coincidencia por últimos 8 dígitos
 
-- customtkinter
-- pandas
-- PIL (Pillow)
-- openpyxl
+## 🚨 Solución de Problemas
 
-## Versión
+### Código no encontrado
+1. Usar el botón "Diagnóstico de Código"
+2. Verificar que el índice esté actualizado
+3. Revisar formato del código escaneado
 
-v0.2.1.5
+### Error de actualización
+1. Verificar permisos de archivos
+2. Asegurar que los archivos Excel no estén abiertos
+3. Revisar formato de los archivos
 
-## Desarrollado por
+## 📝 Changelog
 
-V&C Stack
+### v0.2.1.5
+- ✅ Búsqueda mejorada con múltiples estrategias
+- ✅ Sistema de diagnóstico integrado
+- ✅ Actualización automática del índice
+- ✅ Mejor manejo de errores y robustez
+- ✅ Indicadores visuales de tipo de coincidencia
 
-## Licencia
+## 🤝 Soporte
 
-Este proyecto es propiedad de V&C Stack. Todos los derechos reservados.
+Para reportar problemas o solicitar mejoras, contactar al equipo de desarrollo V&C.

@@ -101,7 +101,7 @@ class BuscadorApp:
         self.clear_index_button = ct.CTkButton(self.botones_frame, text="Borrar Índice", font=("Segoe UI", 12), fg_color="#000000", hover_color="#333333", border_width=2, border_color="#FF5555", text_color="#FF5555", corner_radius=12, width=160, height=36, command=self.borrar_indice)
         self.clear_index_button.pack(side="left", padx=(0, 8))
         
-        # Botón de edición (inicialmente deshabilitado)
+        # Botón de edición (deshabilitado hasta que se escanee)
         self.edit_button = ct.CTkButton(self.botones_frame, text="Editar Items", font=("Segoe UI", 12, "bold"), fg_color="#000000", hover_color="#111111", border_width=2, border_color="#FFAA00", text_color="#FFAA00", corner_radius=12, width=160, height=36, command=self.abrir_editor_items, state="disabled")
         self.edit_button.pack(side="left")
         
@@ -129,6 +129,76 @@ class BuscadorApp:
         self.update_button.pack(pady=(0, 18))
         self.verificar_button = ct.CTkButton(right_col, text="Verificar Índice", font=("Segoe UI", 12), fg_color="#000000", hover_color="#333333", border_width=2, border_color="#00FFAA", text_color="#00FFAA", corner_radius=12, width=200, height=32, command=self.verificar_indice)
         self.verificar_button.pack(pady=(0, 8))
+        
+        # Botón de diagnóstico
+        self.diagnostico_button = ct.CTkButton(right_col, text="Diagnóstico de Código", font=("Segoe UI", 12), fg_color="#000000", hover_color="#333333", border_width=2, border_color="#FFAA00", text_color="#FFAA00", corner_radius=12, width=200, height=32, command=self.mostrar_diagnostico)
+        self.diagnostico_button.pack(pady=(0, 8))
+
+    def mostrar_diagnostico(self):
+        """Muestra una ventana de diagnóstico para códigos problemáticos"""
+        # Crear ventana de diagnóstico
+        diagnostico_window = ct.CTkToplevel(self.root)
+        diagnostico_window.title("Diagnóstico de Códigos - V&C")
+        diagnostico_window.geometry("800x600")
+        diagnostico_window.configure(fg_color="#000000")
+        diagnostico_window.grab_set()  # Hacer modal
+        
+        # Frame principal
+        main_frame = ct.CTkFrame(diagnostico_window, fg_color="#000000")
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # Título
+        ct.CTkLabel(main_frame, text="Diagnóstico de Códigos", 
+                   font=("Segoe UI", 16, "bold"), text_color="#00FFAA", fg_color="#000000").pack(pady=(0, 20))
+        
+        # Frame para entrada de código
+        entrada_frame = ct.CTkFrame(main_frame, fg_color="#111111")
+        entrada_frame.pack(fill="x", pady=(0, 20))
+        
+        ct.CTkLabel(entrada_frame, text="Ingrese el código que no se encuentra:", 
+                   font=("Segoe UI", 12), text_color="#FFAA00", fg_color="#111111").pack(pady=(10, 5))
+        
+        codigo_var = StringVar()
+        codigo_entry = ct.CTkEntry(entrada_frame, textvariable=codigo_var, font=("Segoe UI", 14), 
+                                 width=400, height=36, corner_radius=12, border_width=2, 
+                                 border_color="#00FFAA", fg_color="#000000", text_color="#00FFAA")
+        codigo_entry.pack(pady=(0, 10))
+        
+        # Frame para resultados y botones (contenedor principal)
+        contenido_frame = ct.CTkFrame(main_frame, fg_color="#000000")
+        contenido_frame.pack(fill="both", expand=True, pady=(0, 20))
+        
+        # Frame para resultados (dentro del contenedor)
+        resultados_frame = ct.CTkScrollableFrame(contenido_frame, fg_color="#000000", height=350)
+        resultados_frame.pack(fill="both", expand=True, pady=(10, 10), padx=10)
+        
+        resultado_label = ct.CTkLabel(resultados_frame, text="", font=("Segoe UI", 11), 
+                                    text_color="#55DDFF", fg_color="#000000", wraplength=750, justify="left")
+        resultado_label.pack(anchor="w", padx=10, pady=10)
+        
+        def ejecutar_diagnostico():
+            codigo = codigo_var.get().strip()
+            if not codigo:
+                resultado_label.configure(text="Por favor, ingrese un código para diagnosticar.")
+                return
+            
+            codigo_limpio = ''.join(c for c in str(codigo) if c.isdigit())
+            diagnostico = self.diagnosticar_codigo(codigo_limpio)
+            resultado_label.configure(text=diagnostico)
+        
+        # Botones (dentro del mismo contenedor)
+        botones_frame = ct.CTkFrame(contenido_frame, fg_color="#000000")
+        botones_frame.pack(fill="x", pady=(0, 10), padx=10)
+        
+        ct.CTkButton(botones_frame, text="Ejecutar Diagnóstico", command=ejecutar_diagnostico,
+                    font=("Segoe UI", 14, "bold"), fg_color="#000000", hover_color="#111111", 
+                    border_width=2, border_color="#00FFAA", text_color="#00FFAA", 
+                    corner_radius=12, width=200, height=45).pack(side="left", padx=(0, 10))
+        
+        ct.CTkButton(botones_frame, text="Cerrar", command=diagnostico_window.destroy,
+                    font=("Segoe UI", 14), fg_color="#000000", hover_color="#333333", 
+                    border_width=2, border_color="#FF5555", text_color="#FF5555", 
+                    corner_radius=12, width=150, height=45).pack(side="left")
 
     def actualizar_indice(self):
         try:
@@ -152,7 +222,18 @@ class BuscadorApp:
                 return
 
             def limpiar_item(valor):
-                return re.sub(r'\D', '', str(valor)).lstrip('0')
+                """Función mejorada para limpiar items"""
+                try:
+                    if pd.isna(valor) or valor is None:
+                        return ""
+                    valor_str = str(valor).strip()
+                    if not valor_str or valor_str.lower() in ['nan', 'none', '']:
+                        return ""
+                    # Remover caracteres no numéricos y ceros a la izquierda
+                    solo_numeros = re.sub(r'\D', '', valor_str)
+                    return solo_numeros.lstrip('0') if solo_numeros else ""
+                except Exception:
+                    return ""
 
             # Tipos de proceso a ignorar
             tipos_ignorar = ["Cumple", "Sin norma", "Criterio", "Revisado"]
@@ -163,85 +244,97 @@ class BuscadorApp:
             # Crear diccionario de resultados del reporte
             reporte_dict = {}
             for _, row in df_reporte_filtrado.iterrows():
-                item = str(row.iloc[0]).strip() if len(row) > 0 and pd.notnull(row.iloc[0]) else ""
-                tipo_proceso = str(row.iloc[1]).strip() if len(row) > 1 and pd.notnull(row.iloc[1]) else ""
-                norma = str(row.iloc[2]).strip() if len(row) > 2 and pd.notnull(row.iloc[2]) else ""
-                criterio = str(row.iloc[3]).strip() if len(row) > 3 and pd.notnull(row.iloc[3]) else ""
-                descripcion = str(row.iloc[4]).strip() if len(row) > 4 and pd.notnull(row.iloc[4]) else ""
-                
-                # Si tipo de proceso es "cumple" y criterio está vacío, asignar "CUMPLE" al criterio
-                if tipo_proceso.lower() == "cumple" and (not criterio or criterio.lower() in ["nan", "none", ""]):
-                    criterio = "CUMPLE"
-                
-                if item and item.lower() not in ["nan", "none", ""]:
-                    # Limpiar item para buscar en CLP
-                    item_limpio = re.sub(r'\D', '', str(item)).lstrip('0')
-                    if item_limpio:
-                        if item_limpio not in reporte_dict:
-                            reporte_dict[item_limpio] = []
-                        reporte_dict[item_limpio].append({
-                            'item': item,
-                            'tipo_proceso': tipo_proceso,
-                            'norma': norma,
-                            'criterio': criterio,
-                            'descripcion': descripcion,
-                            'fila_original': row
-                        })
+                try:
+                    item = str(row.iloc[0]).strip() if len(row) > 0 and pd.notnull(row.iloc[0]) else ""
+                    tipo_proceso = str(row.iloc[1]).strip() if len(row) > 1 and pd.notnull(row.iloc[1]) else ""
+                    norma = str(row.iloc[2]).strip() if len(row) > 2 and pd.notnull(row.iloc[2]) else ""
+                    criterio = str(row.iloc[3]).strip() if len(row) > 3 and pd.notnull(row.iloc[3]) else ""
+                    descripcion = str(row.iloc[4]).strip() if len(row) > 4 and pd.notnull(row.iloc[4]) else ""
+                    
+                    # Si tipo de proceso es "cumple" y criterio está vacío, asignar "CUMPLE" al criterio
+                    if tipo_proceso.lower() == "cumple" and (not criterio or criterio.lower() in ["nan", "none", ""]):
+                        criterio = "CUMPLE"
+                    
+                    if item and item.lower() not in ["nan", "none", ""]:
+                        # Limpiar item para buscar en CLP
+                        item_limpio = limpiar_item(item)
+                        if item_limpio:
+                            if item_limpio not in reporte_dict:
+                                reporte_dict[item_limpio] = []
+                            reporte_dict[item_limpio].append({
+                                'item': item,
+                                'tipo_proceso': tipo_proceso,
+                                'norma': norma,
+                                'criterio': criterio,
+                                'descripcion': descripcion,
+                                'fila_original': row
+                            })
+                except Exception as e:
+                    logger.warning(f"Error procesando fila del reporte: {e}")
+                    continue
 
             # Construir índice con clave compuesta
             datos_indice = []
             for _, fila in df_clp.iterrows():
-                item_code = limpiar_item(fila.iloc[0]) if len(fila) > 0 else ""
-                codigo_barras = str(fila.iloc[5]).strip() if len(fila) > 5 else ""
-                
-                # Forzar código de barras a string sin notación científica
-                if codigo_barras:
-                    try:
-                        if 'e' in codigo_barras.lower():
-                            codigo_barras = '{0:.0f}'.format(float(codigo_barras))
-                    except Exception:
-                        pass
-                
-                if item_code and codigo_barras:
-                    codigo_limpio = ''.join(c for c in codigo_barras if c.isdigit())
-                    if codigo_limpio:
-                        clave = f"{codigo_limpio}|{item_code}"
-                        
-                        # Buscar en reporte por item_code
-                        resultados_reporte = reporte_dict.get(item_code, [])
-                        
-                        if resultados_reporte:
-                            # Hay resultados en el reporte
-                            # Determinar resultado basado en criterio y descripción
-                            cumple_count = 0
-                            total_count = len(resultados_reporte)
+                try:
+                    item_code = limpiar_item(fila.iloc[0]) if len(fila) > 0 else ""
+                    codigo_barras = str(fila.iloc[5]).strip() if len(fila) > 5 else ""
+                    
+                    # Forzar código de barras a string sin notación científica
+                    if codigo_barras:
+                        try:
+                            if 'e' in codigo_barras.lower():
+                                codigo_barras = '{0:.0f}'.format(float(codigo_barras))
+                        except Exception:
+                            pass
+                    
+                    if item_code and codigo_barras:
+                        codigo_limpio = ''.join(c for c in codigo_barras if c.isdigit())
+                        if codigo_limpio:
+                            clave = f"{codigo_limpio}|{item_code}"
                             
-                            for r in resultados_reporte:
-                                if r['criterio'].lower() in ['cumple', 'conforme', 'aprobado'] or r['descripcion'].lower() in ['cumple', 'conforme', 'aprobado']:
-                                    cumple_count += 1
+                            # Buscar en reporte por item_code
+                            resultados_reporte = reporte_dict.get(item_code, [])
                             
-                            if cumple_count == total_count:
-                                resultado_final = "CUMPLE"
-                            elif cumple_count > 0:
-                                resultado_final = "REQUIERE REVISIÓN"
+                            if resultados_reporte:
+                                # Hay resultados en el reporte
+                                # Determinar resultado basado en criterio y descripción
+                                cumple_count = 0
+                                total_count = len(resultados_reporte)
+                                
+                                for r in resultados_reporte:
+                                    criterio_lower = r['criterio'].lower()
+                                    descripcion_lower = r['descripcion'].lower()
+                                    if (criterio_lower in ['cumple', 'conforme', 'aprobado'] or 
+                                        descripcion_lower in ['cumple', 'conforme', 'aprobado']):
+                                        cumple_count += 1
+                                
+                                if cumple_count == total_count:
+                                    resultado_final = "CUMPLE"
+                                elif cumple_count > 0:
+                                    resultado_final = "REQUIERE REVISIÓN"
+                                else:
+                                    resultado_final = "INSPECCIÓN"
+                                
+                                detalles = []
+                                for r in resultados_reporte:
+                                    detalles.append(f"Item: {r['item']} - Tipo: {r['tipo_proceso']} - NOM: {r['norma']} - Criterio: {r['criterio']} - Descripción: {r['descripcion']}")
                             else:
-                                resultado_final = "INSPECCIÓN"
+                                # No hay resultados en el reporte
+                                resultado_final = "SIN DATOS"
+                                detalles = ["No se encontró información en el reporte"]
                             
-                            detalles = []
-                            for r in resultados_reporte:
-                                detalles.append(f"Item: {r['item']} - Tipo: {r['tipo_proceso']} - NOM: {r['norma']} - Criterio: {r['criterio']} - Descripción: {r['descripcion']}")
-                        else:
-                            # No hay resultados en el reporte
-                            resultado_final = "SIN DATOS"
-                            detalles = ["No se encontró información en el reporte"]
-                        
-                        datos_indice.append([clave, codigo_limpio, item_code, resultado_final, '; '.join(detalles)])
+                            datos_indice.append([clave, codigo_limpio, item_code, resultado_final, '; '.join(detalles)])
+                except Exception as e:
+                    logger.warning(f"Error procesando fila del CLP: {e}")
+                    continue
 
             df_indice = pd.DataFrame(datos_indice, columns=["CLAVE", "CODIGO", "ITEM", "RESULTADO", "DETALLES"])
             
             # Intentar guardar el archivo con manejo de errores
             try:
                 df_indice.to_csv(INDICE_PATH, index=False, encoding="utf-8")
+                # Recargar el índice en memoria inmediatamente
                 self.cargar_indice_local()
                 messagebox.showinfo("Éxito", f"Índice actualizado localmente. Registros: {len(df_indice)}\nUbicación: {INDICE_PATH}")
             except PermissionError:
@@ -336,8 +429,10 @@ class BuscadorApp:
             self.resultados_actuales = []
             self.codigo_actual = codigo_limpio
             
-            # Buscar todos los códigos que coincidan
+            # Buscar todos los códigos que coincidan - BÚSQUEDA MEJORADA
             coincidencias = []
+            
+            # Estrategia 1: Búsqueda exacta al inicio (original)
             for clave in self.indice_codigos:
                 if clave.startswith(f"{codigo_limpio}|"):
                     item_code = self.indice_codigos[clave]
@@ -347,8 +442,42 @@ class BuscadorApp:
                         'clave': clave,
                         'item': item_code,
                         'resultado': resultado,
-                        'detalles': detalles
+                        'detalles': detalles,
+                        'tipo_coincidencia': 'exacta'
                     })
+            
+            # Estrategia 2: Si no hay coincidencias exactas, buscar códigos que contengan el patrón
+            if not coincidencias:
+                for clave in self.indice_codigos:
+                    codigo_en_clave = clave.split('|')[0] if '|' in clave else ""
+                    if codigo_limpio in codigo_en_clave:
+                        item_code = self.indice_codigos[clave]
+                        resultado = self.indice_resultados.get(clave, "")
+                        detalles = self.indice_detalles.get(clave, "")
+                        coincidencias.append({
+                            'clave': clave,
+                            'item': item_code,
+                            'resultado': resultado,
+                            'detalles': detalles,
+                            'tipo_coincidencia': 'parcial'
+                        })
+            
+            # Estrategia 3: Si aún no hay coincidencias, buscar por similitud (últimos dígitos)
+            if not coincidencias and len(codigo_limpio) >= 8:
+                ultimos_digitos = codigo_limpio[-8:]  # Últimos 8 dígitos
+                for clave in self.indice_codigos:
+                    codigo_en_clave = clave.split('|')[0] if '|' in clave else ""
+                    if codigo_en_clave.endswith(ultimos_digitos):
+                        item_code = self.indice_codigos[clave]
+                        resultado = self.indice_resultados.get(clave, "")
+                        detalles = self.indice_detalles.get(clave, "")
+                        coincidencias.append({
+                            'clave': clave,
+                            'item': item_code,
+                            'resultado': resultado,
+                            'detalles': detalles,
+                            'tipo_coincidencia': 'final'
+                        })
             
             if coincidencias:
                 encontrado = True
@@ -360,6 +489,7 @@ class BuscadorApp:
                     item = coincidencias[0]['item']
                     resultado = coincidencias[0]['resultado']
                     detalles = coincidencias[0]['detalles']
+                    tipo_coincidencia = coincidencias[0]['tipo_coincidencia']
                     
                     # Extraer NOM de los detalles
                     nom_info = "NOM: No disponible"
@@ -370,7 +500,12 @@ class BuscadorApp:
                             if nom_part and nom_part.lower() not in ["nan", "none", ""]:
                                 nom_info = f"NOM: {nom_part}"
                     
-                    self.clave_valor.configure(text=f"ITEM: {item}")
+                    # Mostrar tipo de coincidencia si no es exacta
+                    tipo_info = ""
+                    if tipo_coincidencia != 'exacta':
+                        tipo_info = f" (Coincidencia {tipo_coincidencia})"
+                    
+                    self.clave_valor.configure(text=f"ITEM: {item}{tipo_info}")
                     self.resultado_valor.configure(text=f"RESULTADO: {resultado}")
                     self.nom_valor.configure(text=nom_info)
                     self.detalles_valor.configure(text=f"DETALLES: {detalles}")
@@ -382,7 +517,8 @@ class BuscadorApp:
                     
                     detalles_texto = "DETALLES:\n"
                     for i, coinci in enumerate(coincidencias, 1):
-                        detalles_texto += f"{i}. Item: {coinci['item']} - {coinci['resultado']}\n"
+                        tipo_info = f" [{coinci['tipo_coincidencia']}]" if coinci['tipo_coincidencia'] != 'exacta' else ""
+                        detalles_texto += f"{i}. Item: {coinci['item']}{tipo_info} - {coinci['resultado']}\n"
                         detalles_texto += f"   {coinci['detalles']}\n\n"
                     
                     self.detalles_valor.configure(text=detalles_texto)
@@ -431,13 +567,13 @@ class BuscadorApp:
         ct.CTkLabel(main_frame, text=f"Editor de Reporte - Código: {self.codigo_actual}", 
                    font=("Segoe UI", 16, "bold"), text_color="#00FFAA", fg_color="#000000").pack(pady=(0, 20))
         
-        # Frame scrollable para los items (más pequeño para dejar espacio a los botones)
+        # Frame scrollable para los items 
         items_frame = ct.CTkScrollableFrame(main_frame, fg_color="#000000", height=400)
         items_frame.pack(fill="both", expand=True, pady=(0, 20))
         
         # Opciones disponibles
         tipos_proceso = ["CUMPLE", "ADHERIBLE", "COSTURA", "SIN NORMA"]
-        criterios = ["REVISADO", "NO CUMPLE", ""]
+        criterios = ["REVISADO", "INSTRUCCIONES DE CUIDADO", "INSUMOS", "PAIS DE ORIGEN", "TALLA", "IMPORTADOR", "MARCA", ""]
         
         # Variables para almacenar los cambios
         cambios_items = {}
@@ -609,7 +745,7 @@ class BuscadorApp:
                     messagebox.showerror("Error", f"Error al guardar el reporte: {str(e)}")
                     return
                 
-                # Actualizar el índice local
+                # Actualizar el índice local y recargar en memoria
                 self.actualizar_indice()
                 
                 # Cerrar ventana de edición
@@ -624,6 +760,11 @@ class BuscadorApp:
                 self.resultado_valor.configure(text="RESULTADO: ")
                 self.nom_valor.configure(text="NOM: ")
                 self.detalles_valor.configure(text="DETALLES: ")
+                
+                # Mostrar mensaje de confirmación
+                messagebox.showinfo("Actualización Completa", 
+                                  f"Se actualizaron {cambios_realizados} items en el reporte.\n"
+                                  "El índice ha sido regenerado automáticamente.")
                 
             else:
                 messagebox.showinfo("Información", "No se realizaron cambios.")
@@ -660,6 +801,52 @@ class BuscadorApp:
             self.config_data["reporte"] = ruta
             self.ruta_reporte_var.set(ruta)
             self.guardar_config()
+
+    def diagnosticar_codigo(self, codigo_limpio: str) -> str:
+        """Función de diagnóstico para códigos que no se encuentran"""
+        try:
+            logger.info(f"Diagnosticando código: {codigo_limpio}")
+            
+            if not self.indice_codigos:
+                return "El índice no está cargado. Por favor, actualice el índice."
+            
+            # Verificar si el código está en el índice
+            codigos_en_indice = []
+            for clave in self.indice_codigos:
+                codigo_en_clave = clave.split('|')[0] if '|' in clave else ""
+                codigos_en_indice.append(codigo_en_clave)
+            
+            # Buscar similitudes
+            similitudes = []
+            for codigo in codigos_en_indice:
+                if codigo_limpio in codigo or codigo in codigo_limpio:
+                    similitudes.append(codigo)
+            
+            # Buscar por últimos dígitos
+            ultimos_digitos = codigo_limpio[-6:] if len(codigo_limpio) >= 6 else codigo_limpio
+            coincidencias_finales = []
+            for codigo in codigos_en_indice:
+                if codigo.endswith(ultimos_digitos):
+                    coincidencias_finales.append(codigo)
+            
+            diagnostico = f"""
+DIAGNÓSTICO PARA CÓDIGO: {codigo_limpio}
+
+Total de códigos en índice: {len(codigos_en_indice)}
+Código buscado: {codigo_limpio}
+
+Similitudes encontradas: {len(similitudes)}
+{chr(10).join(similitudes[:10]) if similitudes else 'Ninguna'}
+
+Coincidencias por últimos 6 dígitos: {len(coincidencias_finales)}
+{chr(10).join(coincidencias_finales[:10]) if coincidencias_finales else 'Ninguna'}
+
+Primeros 10 códigos en índice:
+{chr(10).join(codigos_en_indice[:10])}
+"""
+            return diagnostico
+        except Exception as e:
+            return f"Error en diagnóstico: {str(e)}"
 
 # Crear directorio de caché en el directorio actual si no existe
 import os

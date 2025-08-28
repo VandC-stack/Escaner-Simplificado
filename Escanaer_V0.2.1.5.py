@@ -1,3 +1,13 @@
+"""
+================================================================
+   Creado con sangre, sudor y lágrimas
+   mientras lloraba envuelto en una manta 
+   por: Enrique Guzmán
+   Autor: El Don del Ciber
+   Tlalnepantla, México · 2025
+================================================================
+"""
+
 import customtkinter as ct
 from tkinter import StringVar, messagebox, filedialog
 from PIL import Image
@@ -57,15 +67,10 @@ class BuscadorApp:
 
     def guardar_config(self):
         try:
+            # Asegurar que el directorio existe
+            os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
             with open(CONFIG_PATH, "w", encoding="utf-8") as f:
                 json.dump(self.config_data, f)
-        except PermissionError:
-            # Si hay error de permisos, usar directorio temporal
-            import tempfile
-            temp_config_path = os.path.join(tempfile.gettempdir(), "config_temp.json")
-            with open(temp_config_path, "w", encoding="utf-8") as f:
-                json.dump(self.config_data, f)
-            # No cambiar CONFIG_PATH global, solo usar la ruta temporal
         except Exception as e:
             messagebox.showerror("Error", f"Error al guardar configuración: {str(e)}")
 
@@ -206,7 +211,7 @@ class BuscadorApp:
             reporte_path = self.config_data.get("reporte", "")
             
             if not clp_path or not reporte_path:
-                messagebox.showerror("Error", "Debes cargar tanto el archivo CLP como el Reporte de Mercancía en Configuración.")
+                messagebox.showerror("Error", "Debes cargar tanto el archivo CLP como el archivo de Tipos de Procesos en Configuración.")
                 return
             
             # Leer archivo CLP
@@ -218,7 +223,7 @@ class BuscadorApp:
             # Leer archivo de reporte de mercancía
             df_reporte = pd.read_excel(reporte_path, dtype=str)
             if df_reporte.empty:
-                messagebox.showerror("Error", "El archivo de reporte de mercancía está vacío.")
+                messagebox.showerror("Error", "El archivo de tipos de procesos está vacío.")
                 return
 
             def limpiar_item(valor):
@@ -297,7 +302,7 @@ class BuscadorApp:
                             resultados_reporte = reporte_dict.get(item_code, [])
                             
                             if resultados_reporte:
-                                # Hay resultados en el reporte
+                                    
                                 # Determinar resultado basado en criterio y descripción
                                 cumple_count = 0
                                 total_count = len(resultados_reporte)
@@ -333,18 +338,12 @@ class BuscadorApp:
             
             # Intentar guardar el archivo con manejo de errores
             try:
+                # Asegurar que el directorio existe
+                os.makedirs(os.path.dirname(INDICE_PATH), exist_ok=True)
                 df_indice.to_csv(INDICE_PATH, index=False, encoding="utf-8")
                 # Recargar el índice en memoria inmediatamente
                 self.cargar_indice_local()
                 messagebox.showinfo("Éxito", f"Índice actualizado localmente. Registros: {len(df_indice)}\nUbicación: {INDICE_PATH}")
-            except PermissionError:
-                # Si hay error de permisos, intentar con directorio temporal
-                import tempfile
-                temp_path = os.path.join(tempfile.gettempdir(), "indice_temp.csv")
-                df_indice.to_csv(temp_path, index=False, encoding="utf-8")
-                messagebox.showwarning("Advertencia", f"Índice guardado en ubicación temporal debido a permisos.\nUbicación: {temp_path}")
-                # Cargar el índice desde la ubicación temporal
-                self.cargar_indice_local()
             except Exception as e:
                 messagebox.showerror("Error", f"Error al guardar el índice: {str(e)}")
         except Exception as e:
@@ -477,7 +476,7 @@ class BuscadorApp:
                             'resultado': resultado,
                             'detalles': detalles,
                             'tipo_coincidencia': 'final'
-                        })
+                    })
             
             if coincidencias:
                 encontrado = True
@@ -565,35 +564,84 @@ class BuscadorApp:
         
         # Título
         ct.CTkLabel(main_frame, text=f"Editor de Reporte - Código: {self.codigo_actual}", 
-                   font=("Segoe UI", 16, "bold"), text_color="#00FFAA", fg_color="#000000").pack(pady=(0, 20))
+                   font=("Segoe UI", 16, "bold"), text_color="#00FFAA", fg_color="#000000").pack(pady=(0, 10))
+        
+        # Frame para buscador
+        buscador_frame = ct.CTkFrame(main_frame, fg_color="#111111")
+        buscador_frame.pack(fill="x", pady=(0, 10), padx=10)
+        
+        ct.CTkLabel(buscador_frame, text="Buscar Item:", 
+                   font=("Segoe UI", 12), text_color="#FFAA00", fg_color="#111111").pack(side="left", padx=(10, 5))
+        
+        # Variable para el buscador
+        busqueda_var = StringVar()
+        busqueda_entry = ct.CTkEntry(buscador_frame, textvariable=busqueda_var, 
+                                   font=("Segoe UI", 12), width=300, height=32, 
+                                   corner_radius=8, border_width=2, border_color="#00FFAA", 
+                                   fg_color="#000000", text_color="#00FFAA", 
+                                   placeholder_text="Escriba para buscar items...")
+        busqueda_entry.pack(side="left", padx=(0, 10))
+        
+        # Botón para limpiar búsqueda
+        def limpiar_busqueda():
+            busqueda_var.set("")
+        
+        ct.CTkButton(buscador_frame, text="Limpiar", command=limpiar_busqueda,
+                    font=("Segoe UI", 11), fg_color="#000000", hover_color="#333333", 
+                    border_width=2, border_color="#FF5555", text_color="#FF5555", 
+                    corner_radius=8, width=80, height=32).pack(side="left")
         
         # Frame scrollable para los items 
-        items_frame = ct.CTkScrollableFrame(main_frame, fg_color="#000000", height=400)
+        items_frame = ct.CTkScrollableFrame(main_frame, fg_color="#000000", height=350)
         items_frame.pack(fill="both", expand=True, pady=(0, 20))
         
         # Opciones disponibles
-        tipos_proceso = ["CUMPLE", "ADHERIBLE", "COSTURA", "SIN NORMA"]
-        criterios = ["REVISADO", "INSTRUCCIONES DE CUIDADO", "INSUMOS", "PAIS DE ORIGEN", "TALLA", "IMPORTADOR", "MARCA", ""]
+        tipos_proceso = ["CUMPLE", "ADHERIBLE", "COSTURA", "SIN NORMA", ""]
+        criterios = ["REVISADO", "INSTRUCCIONES DE CUIDADO", "INSUMOS", "PAIS DE ORIGEN", "TALLA", "IMPORTADOR", "MARCA", "EDAD RECOMENDADA", "INGRESAR TEXTO", ""]
         
         # Variables para almacenar los cambios
         cambios_items = {}
         
+        # Lista para almacenar referencias a los widgets de items
+        item_widgets = []
+        
+        # Función para filtrar items
+        def filtrar_items(*args):
+            busqueda = busqueda_var.get().lower().strip()
+            
+            # Ocultar/mostrar widgets según la búsqueda
+            for widget_info in item_widgets:
+                item_text = widget_info['item_text'].lower()
+                if not busqueda or busqueda in item_text:
+                    widget_info['frame'].pack(fill="x", pady=5, padx=10)
+                else:
+                    widget_info['frame'].pack_forget()
+        
+        # Vincular la función de filtrado al cambio de texto
+        busqueda_var.trace("w", filtrar_items)
+        
         # Crear widgets para cada item
         for i, resultado in enumerate(self.resultados_actuales):
             item_frame = ct.CTkFrame(items_frame, fg_color="#111111", corner_radius=8)
-            item_frame.pack(fill="x", pady=5, padx=10)
+            item_frame.pack(fill="x", pady=3, padx=10)
+            
+            # Almacenar referencia para filtrado
+            item_widgets.append({
+                'frame': item_frame,
+                'item_text': f"Item: {resultado['item']} - Estado actual: {resultado['resultado']}"
+            })
             
             # Información del item
             item_info = ct.CTkLabel(item_frame, 
                                   text=f"Item: {resultado['item']} - Estado actual: {resultado['resultado']}", 
                                   font=("Segoe UI", 12, "bold"), text_color="#00FFAA", fg_color="#111111")
-            item_info.pack(anchor="w", padx=10, pady=(10, 5))
+            item_info.pack(anchor="w", padx=10, pady=(8, 3))
             
             # Detalles
             detalles_label = ct.CTkLabel(item_frame, 
                                        text=f"Detalles: {resultado['detalles'][:150]}...", 
                                        font=("Segoe UI", 10), text_color="#55DDFF", fg_color="#111111", wraplength=900)
-            detalles_label.pack(anchor="w", padx=10, pady=(0, 10))
+            detalles_label.pack(anchor="w", padx=10, pady=(0, 8))
             
             # Extraer información actual del reporte
             tipo_actual = ""
@@ -615,7 +663,7 @@ class BuscadorApp:
             
             # Frame para controles
             controles_frame = ct.CTkFrame(item_frame, fg_color="#111111")
-            controles_frame.pack(fill="x", padx=10, pady=(0, 10))
+            controles_frame.pack(fill="x", padx=10, pady=(0, 8))
             
             # TIPO DE PROCESO
             ct.CTkLabel(controles_frame, text="Tipo de Proceso:", font=("Segoe UI", 11), text_color="#FFAA00", fg_color="#111111").pack(side="left", padx=(0, 10))
@@ -635,7 +683,35 @@ class BuscadorApp:
             ct.CTkLabel(controles_frame, text="Criterio:", font=("Segoe UI", 11), text_color="#FFAA00", fg_color="#111111").pack(side="left", padx=(0, 10))
             
             criterio_var = StringVar(value=criterio_actual)
-            criterio_menu = ct.CTkOptionMenu(controles_frame, 
+            
+            # Frame para contener el menú y el campo de texto
+            criterio_container = ct.CTkFrame(controles_frame, fg_color="#111111")
+            criterio_container.pack(side="left", padx=(0, 20))
+            
+            # Crear el campo de texto (inicialmente oculto)
+            texto_personalizado_var = StringVar()
+            criterio_entry = ct.CTkEntry(criterio_container, 
+                                       textvariable=texto_personalizado_var,
+                                       font=("Segoe UI", 11), 
+                                       width=120, height=32,
+                                       corner_radius=8, 
+                                       border_width=2, 
+                                       border_color="#00FFAA",
+                                       fg_color="#000000", 
+                                       text_color="#00FFAA",
+                                       placeholder_text="INGRESE TEXTO...")
+            
+            # Función para convertir a mayúsculas
+            def convertir_mayusculas(*args):
+                texto = texto_personalizado_var.get()
+                if texto and texto != texto.upper():
+                    texto_personalizado_var.set(texto.upper())
+            
+            # Vincular la función al cambio de texto
+            texto_personalizado_var.trace("w", convertir_mayusculas)
+            
+            # Crear el menú desplegable
+            criterio_menu = ct.CTkOptionMenu(criterio_container, 
                                            values=criterios, 
                                            variable=criterio_var,
                                            fg_color="#000000", 
@@ -643,7 +719,68 @@ class BuscadorApp:
                                            button_hover_color="#00DD88",
                                            text_color="#00FFAA",
                                            width=120)
-            criterio_menu.pack(side="left", padx=(0, 20))
+            criterio_menu.pack(side="left")
+            
+            # Función para manejar la selección del menú (definida dentro del loop para cada item)
+            def crear_on_menu_select(menu_widget, entry_widget, var_widget):
+                def on_menu_select(selection):
+                    if selection == "INGRESAR TEXTO":
+                        menu_widget.pack_forget()
+                        entry_widget.pack(side="left")
+                        entry_widget.focus_set()
+                    else:
+                        entry_widget.pack_forget()
+                        menu_widget.pack(side="left")
+                        # Limpiar el texto personalizado si se selecciona otra opción
+                        if selection != "INGRESAR TEXTO":
+                            var_widget.set("")
+                return on_menu_select
+            
+            # Función para manejar teclas en el campo de texto (definida dentro del loop)
+            def crear_manejar_teclas(entry_widget, menu_widget, criterio_var_widget, texto_var_widget):
+                def manejar_teclas(event):
+                    if event.keysym == 'Escape':
+                        # ESC: Volver al menú desplegable
+                        entry_widget.pack_forget()
+                        menu_widget.pack(side="left")
+                        criterio_var_widget.set("")  # Limpiar la selección
+                        texto_var_widget.set("")  # Limpiar el texto
+                        return "break"  # Prevenir propagación del evento
+                    elif event.keysym == 'Return':
+                        # ENTER: Confirmar el texto
+                        texto_ingresado = texto_var_widget.get().strip()
+                        if texto_ingresado:
+                            # Si hay texto, mantener el campo visible y confirmar
+                            criterio_var_widget.set("INGRESAR TEXTO")
+                            # Asegurar que el texto esté en mayúsculas
+                            texto_var_widget.set(texto_ingresado.upper())
+                            # Quitar el foco del campo
+                            entry_widget.master.focus_set()
+                            # También quitar el foco de la ventana principal
+                            editor_window.focus_set()
+                        else:
+                            # Si no hay texto, volver al menú sin confirmar
+                            criterio_var_widget.set("")
+                            entry_widget.pack_forget()
+                            menu_widget.pack(side="left")
+                        return "break"  # Prevenir propagación del evento
+                    return None
+                return manejar_teclas
+            
+            # Crear y vincular la función de manejo de teclas
+            manejar_teclas = crear_manejar_teclas(criterio_entry, criterio_menu, criterio_var, texto_personalizado_var)
+            criterio_entry.bind('<Key>', manejar_teclas)
+            
+            # Configurar el callback del menú
+            on_menu_select = crear_on_menu_select(criterio_menu, criterio_entry, texto_personalizado_var)
+            criterio_menu.configure(command=on_menu_select)
+            
+            # Si el criterio actual no está en la lista predefinida, mostrar campo de texto
+            if criterio_actual and criterio_actual not in criterios[:-2]:  # Excluir "INGRESAR TEXTO" y ""
+                texto_personalizado_var.set(criterio_actual)
+                criterio_var.set("INGRESAR TEXTO")
+                criterio_menu.pack_forget()
+                criterio_entry.pack(side="left")
             
             # Almacenar referencia para acceso posterior
             cambios_items[resultado['clave']] = {
@@ -652,6 +789,7 @@ class BuscadorApp:
                 'criterio_original': criterio_actual,
                 'tipo_var': tipo_var,
                 'criterio_var': criterio_var,
+                'texto_personalizado_var': texto_personalizado_var,
                 'tipo_menu': tipo_menu,
                 'criterio_menu': criterio_menu
             }
@@ -691,14 +829,14 @@ class BuscadorApp:
         cancelar_button.pack(side="left")
 
     def guardar_cambios_items(self, cambios_items, editor_window):
-        """Guarda los cambios realizados en el reporte de mercancía"""
+        """Guarda los cambios realizados en el archivo de tipos de procesos"""
         try:
             reporte_path = self.config_data.get("reporte", "")
             if not reporte_path or not os.path.exists(reporte_path):
-                messagebox.showerror("Error", "No se encontró el archivo de reporte de mercancía.")
+                messagebox.showerror("Error", "No se encontró el archivo de tipos de procesos.")
                 return
             
-            # Leer el reporte original
+            # Leer el archivo de tipos de procesos original
             df_reporte = pd.read_excel(reporte_path, dtype=str)
             
             # Contador de cambios
@@ -709,6 +847,10 @@ class BuscadorApp:
                 item = info['item']
                 nuevo_tipo = info['tipo_var'].get()
                 nuevo_criterio = info['criterio_var'].get()
+                
+                # Si el criterio es "INGRESAR TEXTO", usar el texto personalizado
+                if nuevo_criterio == "INGRESAR TEXTO":
+                    nuevo_criterio = info['texto_personalizado_var'].get()
                 
                 # Buscar la fila correspondiente en el reporte
                 for idx, row in df_reporte.iterrows():
@@ -730,19 +872,12 @@ class BuscadorApp:
                         break
             
             if cambios_realizados > 0:
-                # Guardar el reporte actualizado
+                # Guardar el archivo de tipos de procesos actualizado
                 try:
                     df_reporte.to_excel(reporte_path, index=False)
-                    messagebox.showinfo("Éxito", f"Se guardaron {cambios_realizados} cambios en el reporte de mercancía.")
-                except PermissionError:
-                    # Si hay error de permisos, crear copia de respaldo
-                    backup_path = reporte_path.replace('.xlsx', '_backup.xlsx').replace('.xls', '_backup.xls')
-                    df_reporte.to_excel(backup_path, index=False)
-                    messagebox.showwarning("Advertencia", 
-                                         f"No se pudo guardar el archivo original debido a permisos.\n"
-                                         f"Los cambios se guardaron en: {backup_path}")
+                    messagebox.showinfo("Éxito", f"Se guardaron {cambios_realizados} cambios en el archivo de tipos de procesos.")
                 except Exception as e:
-                    messagebox.showerror("Error", f"Error al guardar el reporte: {str(e)}")
+                    messagebox.showerror("Error", f"Error al guardar el archivo de tipos de procesos: {str(e)}")
                     return
                 
                 # Actualizar el índice local y recargar en memoria
@@ -783,10 +918,10 @@ class BuscadorApp:
         self.ruta_clp_label = ct.CTkLabel(frame, textvariable=self.ruta_clp_var, text_color="#55DDFF", wraplength=600, fg_color="#000000")
         self.ruta_clp_label.pack(anchor="w", padx=20)
         ct.CTkButton(frame, text="Cargar Archivo CLP", command=self.cargar_archivo_clp, font=("Segoe UI", 13, "bold"), fg_color="#000000", hover_color="#111111", border_width=2, border_color="#00FFAA", text_color="#00FFAA", corner_radius=12, width=260, height=36).pack(pady=5, padx=20, anchor="w")
-        ct.CTkLabel(frame, text="Reporte de Mercancía:", text_color="#00FFAA", font=("Segoe UI", 14, "bold"), fg_color="#000000").pack(anchor="w", padx=20, pady=(10,0))
+        ct.CTkLabel(frame, text="Tipos de Procesos:", text_color="#00FFAA", font=("Segoe UI", 14, "bold"), fg_color="#000000").pack(anchor="w", padx=20, pady=(10,0))
         self.ruta_reporte_label = ct.CTkLabel(frame, textvariable=self.ruta_reporte_var, text_color="#55DDFF", wraplength=600, fg_color="#000000")
         self.ruta_reporte_label.pack(anchor="w", padx=20)
-        ct.CTkButton(frame, text="Cargar Reporte de Mercancía", command=self.cargar_archivo_reporte, font=("Segoe UI", 13, "bold"), fg_color="#000000", hover_color="#111111", border_width=2, border_color="#00FFAA", text_color="#00FFAA", corner_radius=12, width=260, height=36).pack(pady=5, padx=20, anchor="w")
+        ct.CTkButton(frame, text="Cargar Tipos de Procesos", command=self.cargar_archivo_reporte, font=("Segoe UI", 13, "bold"), fg_color="#000000", hover_color="#111111", border_width=2, border_color="#00FFAA", text_color="#00FFAA", corner_radius=12, width=260, height=36).pack(pady=5, padx=20, anchor="w")
 
     def cargar_archivo_clp(self):
         ruta = filedialog.askopenfilename(filetypes=[("Archivos Excel", "*.xls;*.xlsx"), ("Todos", "*.*")])
@@ -854,10 +989,17 @@ CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cache")
 if not os.path.exists(CACHE_DIR):
     try:
         os.makedirs(CACHE_DIR)
-    except Exception:
-        # Si no se puede crear, usar directorio temporal
+    except Exception as e:
+        # Si no se puede crear en el directorio actual, usar directorio de usuario
         import tempfile
-        CACHE_DIR = tempfile.gettempdir()
+        user_cache_dir = os.path.join(os.path.expanduser("~"), "AppData", "Local", "EscanerVC")
+        if not os.path.exists(user_cache_dir):
+            try:
+                os.makedirs(user_cache_dir)
+                CACHE_DIR = user_cache_dir
+            except Exception:
+                # Último recurso: directorio temporal del sistema
+                CACHE_DIR = tempfile.gettempdir()
 
 CONFIG_PATH = os.path.join(CACHE_DIR, "config.json")
 INDICE_PATH = os.path.join(CACHE_DIR, "indice.csv")
@@ -869,3 +1011,4 @@ if __name__ == "__main__":
     root.resizable(True, True)
     app = BuscadorApp(root)
     root.mainloop() 
+    

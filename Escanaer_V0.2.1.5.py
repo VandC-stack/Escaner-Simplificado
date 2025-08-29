@@ -53,6 +53,10 @@ class BuscadorApp:
             
             self.tabview.set("Escáner")
             self.cargar_indice_local()
+            # Verificar y sincronizar configuración
+            self.verificar_configuracion()
+            # Actualizar etiquetas con información guardada
+            self.actualizar_etiquetas_configuracion()
         except Exception as e:
             import traceback
             error_text = f"ERROR EN BuscadorApp:\n{e}\n{traceback.format_exc()}"
@@ -61,9 +65,24 @@ class BuscadorApp:
     def cargar_config(self):
         try:
             with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
+                config = json.load(f)
+                # Asegurar que todas las claves existan
+                if "clp" not in config:
+                    config["clp"] = ""
+                if "reporte" not in config:
+                    config["reporte"] = ""
+                if "ultima_actualizacion" not in config:
+                    config["ultima_actualizacion"] = "Nunca"
+                if "nombre_archivo_reporte" not in config:
+                    config["nombre_archivo_reporte"] = ""
+                
+                # Si existe reporte pero no nombre_archivo_reporte, sincronizar
+                if config["reporte"] and not config["nombre_archivo_reporte"]:
+                    config["nombre_archivo_reporte"] = config["reporte"]
+                
+                return config
         except Exception:
-            return {"clp": "", "reporte": ""}
+            return {"clp": "", "reporte": "", "ultima_actualizacion": "Nunca", "nombre_archivo_reporte": ""}
 
     def guardar_config(self):
         try:
@@ -129,7 +148,11 @@ class BuscadorApp:
         self.total_codigos_label = ct.CTkLabel(right_col, text="Total de códigos: 0", font=("Segoe UI", 11), text_color="#00FFAA", fg_color="#000000")
         self.total_codigos_label.pack(pady=(0, 2))
         self.ultima_actualizacion_label = ct.CTkLabel(right_col, text="Última actualización: Nunca", font=("Segoe UI", 11), text_color="#00FFAA", fg_color="#000000")
-        self.ultima_actualizacion_label.pack(pady=(0, 8))
+        self.ultima_actualizacion_label.pack(pady=(0, 2))
+        
+        # Mostrar nombre del archivo de tipos de proceso
+        self.nombre_archivo_label = ct.CTkLabel(right_col, text="Archivo: No cargado", font=("Segoe UI", 10), text_color="#55DDFF", fg_color="#000000")
+        self.nombre_archivo_label.pack(pady=(0, 8))
         self.update_button = ct.CTkButton(right_col, text="Actualizar Índice", font=("Segoe UI", 12, "bold"), fg_color="#000000", hover_color="#111111", border_width=2, border_color="#00FFAA", text_color="#00FFAA", corner_radius=12, width=200, height=32, command=self.actualizar_indice)
         self.update_button.pack(pady=(0, 18))
         self.verificar_button = ct.CTkButton(right_col, text="Verificar Índice", font=("Segoe UI", 12), fg_color="#000000", hover_color="#333333", border_width=2, border_color="#00FFAA", text_color="#00FFAA", corner_radius=12, width=200, height=32, command=self.verificar_indice)
@@ -138,6 +161,10 @@ class BuscadorApp:
         # Botón de diagnóstico
         self.diagnostico_button = ct.CTkButton(right_col, text="Diagnóstico de Código", font=("Segoe UI", 12), fg_color="#000000", hover_color="#333333", border_width=2, border_color="#FFAA00", text_color="#FFAA00", corner_radius=12, width=200, height=32, command=self.mostrar_diagnostico)
         self.diagnostico_button.pack(pady=(0, 8))
+        
+        # Botón de debug de configuración
+        self.debug_config_button = ct.CTkButton(right_col, text="Debug Config", font=("Segoe UI", 10), fg_color="#000000", hover_color="#333333", border_width=2, border_color="#FF00FF", text_color="#FF00FF", corner_radius=12, width=200, height=28, command=self.debug_configuracion)
+        self.debug_config_button.pack(pady=(0, 8))
 
     def mostrar_diagnostico(self):
         """Muestra una ventana de diagnóstico para códigos problemáticos"""
@@ -341,8 +368,19 @@ class BuscadorApp:
                 # Asegurar que el directorio existe
                 os.makedirs(os.path.dirname(INDICE_PATH), exist_ok=True)
                 df_indice.to_csv(INDICE_PATH, index=False, encoding="utf-8")
+                
+                # Guardar fecha y hora de la actualización
+                from datetime import datetime
+                fecha_actualizacion = datetime.now().strftime("%d/%m/%Y %H:%M")
+                self.config_data["ultima_actualizacion"] = fecha_actualizacion
+                self.guardar_config()
+                
                 # Recargar el índice en memoria inmediatamente
                 self.cargar_indice_local()
+                
+                # Actualizar etiquetas
+                self.actualizar_etiquetas_configuracion()
+                
                 messagebox.showinfo("Éxito", f"Índice actualizado localmente. Registros: {len(df_indice)}\nUbicación: {INDICE_PATH}")
             except Exception as e:
                 messagebox.showerror("Error", f"Error al guardar el índice: {str(e)}")
@@ -380,7 +418,12 @@ class BuscadorApp:
             self.nom_valor.configure(text="NOM: ")
             self.detalles_valor.configure(text="DETALLES: ")
             self.total_codigos_label.configure(text="Total de códigos: 0")
-            self.ultima_actualizacion_label.configure(text="Última actualización: Nunca")
+            
+            # Actualizar última actualización y etiquetas
+            self.config_data["ultima_actualizacion"] = "Nunca"
+            self.guardar_config()
+            self.actualizar_etiquetas_configuracion()
+            
             messagebox.showinfo("Éxito", "Índice local borrado completamente.")
         except Exception as e:
             messagebox.showerror("Error", f"Error al borrar el índice local: {str(e)}")
@@ -397,6 +440,43 @@ class BuscadorApp:
             self.indice_resultados = {}
             self.indice_detalles = {}
             self.total_codigos_label.configure(text="Total de códigos: 0")
+    
+    def verificar_configuracion(self):
+        """Verifica y sincroniza la configuración al inicio"""
+        try:
+            # Sincronizar nombre_archivo_reporte con reporte si es necesario
+            if self.config_data.get("reporte") and not self.config_data.get("nombre_archivo_reporte"):
+                self.config_data["nombre_archivo_reporte"] = self.config_data["reporte"]
+                self.guardar_config()
+            
+            # Verificar que los archivos configurados existan
+            if self.config_data.get("reporte") and not os.path.exists(self.config_data["reporte"]):
+                logger.warning(f"Archivo de reporte no encontrado: {self.config_data['reporte']}")
+                # No limpiar la configuración, solo registrar el warning
+        except Exception as e:
+            logger.error(f"Error al verificar configuración: {e}")
+    
+    def actualizar_etiquetas_configuracion(self):
+        """Actualiza las etiquetas con la información guardada en configuración"""
+        try:
+            # Actualizar última actualización
+            ultima_actualizacion = self.config_data.get("ultima_actualizacion", "Nunca")
+            self.ultima_actualizacion_label.configure(text=f"Última actualización: {ultima_actualizacion}")
+            
+            # Actualizar nombre del archivo de tipos de proceso
+            # Primero intentar con nombre_archivo_reporte, si no existe usar la ruta del reporte
+            nombre_archivo = self.config_data.get("nombre_archivo_reporte", "")
+            if not nombre_archivo:
+                nombre_archivo = self.config_data.get("reporte", "")
+            
+            if nombre_archivo and os.path.exists(nombre_archivo):
+                # Extraer solo el nombre del archivo, no la ruta completa
+                nombre_solo = os.path.basename(nombre_archivo)
+                self.nombre_archivo_label.configure(text=f"Archivo: {nombre_solo}")
+            else:
+                self.nombre_archivo_label.configure(text="Archivo: No cargado")
+        except Exception as e:
+            logger.error(f"Error al actualizar etiquetas: {e}")
 
     def buscar_codigo(self):
         codigo = self.codigo_var.get().strip()
@@ -929,13 +1009,42 @@ class BuscadorApp:
             self.config_data["clp"] = ruta
             self.ruta_clp_var.set(ruta)
             self.guardar_config()
+            # Actualizar etiquetas después de cargar archivo
+            self.actualizar_etiquetas_configuracion()
 
     def cargar_archivo_reporte(self):
         ruta = filedialog.askopenfilename(filetypes=[("Archivos Excel", "*.xls;*.xlsx"), ("Todos", "*.*")])
         if ruta:
             self.config_data["reporte"] = ruta
             self.ruta_reporte_var.set(ruta)
+            # Guardar también el nombre del archivo para mostrar
+            self.config_data["nombre_archivo_reporte"] = ruta
             self.guardar_config()
+            # Actualizar etiquetas después de cargar archivo
+            self.actualizar_etiquetas_configuracion()
+
+    def debug_configuracion(self):
+        """Muestra información de debug de la configuración"""
+        try:
+            debug_info = f"""
+DEBUG DE CONFIGURACIÓN:
+
+Archivo CLP: {self.config_data.get('clp', 'No configurado')}
+Archivo Reporte: {self.config_data.get('reporte', 'No configurado')}
+Nombre Archivo Reporte: {self.config_data.get('nombre_archivo_reporte', 'No configurado')}
+Última Actualización: {self.config_data.get('ultima_actualizacion', 'No configurado')}
+
+Verificaciones:
+- CLP existe: {os.path.exists(self.config_data.get('clp', '')) if self.config_data.get('clp') else False}
+- Reporte existe: {os.path.exists(self.config_data.get('reporte', '')) if self.config_data.get('reporte') else False}
+- Nombre archivo reporte existe: {os.path.exists(self.config_data.get('nombre_archivo_reporte', '')) if self.config_data.get('nombre_archivo_reporte') else False}
+
+Ruta de configuración: {CONFIG_PATH}
+Ruta de índice: {INDICE_PATH}
+"""
+            messagebox.showinfo("Debug Configuración", debug_info)
+        except Exception as e:
+            messagebox.showerror("Error Debug", f"Error al mostrar debug: {str(e)}")
 
     def diagnosticar_codigo(self, codigo_limpio: str) -> str:
         """Función de diagnóstico para códigos que no se encuentran"""
@@ -1009,6 +1118,102 @@ if __name__ == "__main__":
     root.title("Escáner de Códigos V&C")
     root.geometry("900x700")
     root.resizable(True, True)
+    
+    # Configurar icono de la aplicación
+    try:
+        icon_path = os.path.join(os.path.dirname(__file__), 'resources', 'Escaner.ico')
+        if os.path.exists(icon_path):
+            root.iconbitmap(icon_path)
+            # También configurar para la barra de tareas en Windows
+            try:
+                import ctypes
+                myappid = 'vandc.escaner.1.0'  # ID único para la aplicación
+                ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+            except:
+                pass
+        else:
+            # Si no existe el .ico, intentar con el .png
+            png_path = os.path.join(os.path.dirname(__file__), 'resources', 'Logo (2).png')
+            if os.path.exists(png_path):
+                # Convertir PNG a ICO temporalmente para Windows
+                try:
+                    from PIL import Image
+                    img = Image.open(png_path)
+                    # Crear un archivo ICO temporal
+                    temp_ico = os.path.join(os.path.dirname(__file__), 'temp_icon.ico')
+                    img.save(temp_ico, format='ICO')
+                    root.iconbitmap(temp_ico)
+                    
+                    # Configurar para la barra de tareas
+                    try:
+                        import ctypes
+                        myappid = 'vandc.escaner.1.0'
+                        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+                    except:
+                        pass
+                    
+                    # Limpiar archivo temporal después de un tiempo
+                    import threading
+                    import time
+                    def cleanup_temp_ico():
+                        time.sleep(2)
+                        try:
+                            if os.path.exists(temp_ico):
+                                os.remove(temp_ico)
+                        except:
+                            pass
+                    threading.Thread(target=cleanup_temp_ico, daemon=True).start()
+                except Exception as e:
+                    print(f"No se pudo configurar el icono: {e}")
+    except Exception as e:
+        print(f"Error al configurar icono: {e}")
+    
+    # Configurar favicon para la barra de título (Windows)
+    try:
+        if os.path.exists(icon_path):
+            # Usar el icono existente
+            pass
+        elif os.path.exists(png_path):
+            # Crear un favicon temporal pequeño
+            try:
+                from PIL import Image
+                img = Image.open(png_path)
+                # Redimensionar para favicon (16x16, 32x32)
+                favicon_sizes = [(16, 16), (32, 32)]
+                favicon_images = []
+                for size in favicon_sizes:
+                    favicon_img = img.resize(size, Image.Resampling.LANCZOS)
+                    favicon_images.append(favicon_img)
+                
+                # Guardar como ICO con múltiples tamaños
+                temp_favicon = os.path.join(os.path.dirname(__file__), 'temp_favicon.ico')
+                favicon_images[0].save(temp_favicon, format='ICO', sizes=favicon_sizes)
+                
+                # Limpiar favicon temporal
+                def cleanup_favicon():
+                    time.sleep(3)
+                    try:
+                        if os.path.exists(temp_favicon):
+                            os.remove(temp_favicon)
+                    except:
+                        pass
+                threading.Thread(target=cleanup_favicon, daemon=True).start()
+            except Exception as e:
+                print(f"No se pudo crear favicon: {e}")
+    except Exception as e:
+        print(f"Error al configurar favicon: {e}")
+    
     app = BuscadorApp(root)
+    
+    # Configurar el protocolo de cierre para guardar configuración
+    def on_closing():
+        try:
+            app.guardar_config()
+            root.destroy()
+        except Exception as e:
+            print(f"Error al cerrar: {e}")
+            root.destroy()
+    
+    root.protocol("WM_DELETE_WINDOW", on_closing)
     root.mainloop() 
     
